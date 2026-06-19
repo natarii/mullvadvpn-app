@@ -2,11 +2,15 @@ use ipnetwork::{IpNetwork, Ipv4Network, Ipv6Network};
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 /// When "allow local network" is enabled the app will allow traffic to and from these networks.
-pub const ALLOWED_LAN_NETS: [IpNetwork; 6] = [
+pub const ALLOWED_LAN_NETS: [IpNetwork; 7] = [
     v4(Ipv4Addr::new(10, 0, 0, 0), 8),
     v4(Ipv4Addr::new(172, 16, 0, 0), 12),
     v4(Ipv4Addr::new(192, 168, 0, 0), 16),
     v4(Ipv4Addr::new(169, 254, 0, 0), 16),
+    // tailscale carrier-grade nat range (rfc 6598). tailnet node ipv4
+    // addresses are assigned from here, so allow them through lan bypass.
+    // tailscale's ipv6 range (fd7a:115c:a1e0::/48) is already covered by fc00::/7 below.
+    v4(Ipv4Addr::new(100, 64, 0, 0), 10),
     v6(Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 0), 10),
     v6(Ipv6Addr::new(0xfc00, 0, 0, 0, 0, 0, 0, 0), 7),
 ];
