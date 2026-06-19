@@ -1,0 +1,62 @@
+# GitLab CI for building the Mullvad VPN desktop app (Linux + Windows).
+#
+# This fork adds the Tailscale CGNAT range (100.64.0.0/10) to the allowed
+# LAN networks, so "Local network sharing" also permits traffic to tailnet IPs.
+#
+# Builds are unsigned, matching Mullvad's own e2e workflow. The Linux job runs
+# inside Mullvad's prebuilt build container; the Windows job needs a native
+# Windows runner with Visual Studio 2022 + Windows SDK + git-bash.
+#
+# Runner selection is by tag. Adjust the `tags:` entries to match the tags you
+# gave your registered runners.
+
+stages:
+  - build
+
+variables:
+  # we init only the submodules each platform needs, rather than recursing into
+  # the ios submodule which the desktop build does not use.
+  GIT_SUBMODULE_STRATEGY: none
+  GIT_DEPTH: "0"
+
+build-linux:
+  stage: build
+  tags:
+    - linux
+    - docker
+  image: ghcr.io/mullvad/mullvadvpn-app-build:09b5e4e744
+  variables:
+    # keep the cargo target dir inside the project so it can be cached.
+    CARGO_TARGET_DIR: "$CI_PROJECT_DIR/target"
+  cache:
+    key: cargo-linux
+    paths:
+      - .cargo-registry/
+      - target/
+  before_script:
+    - export CARGO_HOME="$CI_PROJECT_DIR/.cargo-registry"
+    - git submodule update --init --depth 1 dist-assets/binaries
+  script:
+    - ./build.sh --optimize
+  artifacts:
+    name: "mullvad-linux-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/*.deb
+      - dist/*.rpm
+    expire_in: 1 week
+
+build-windows:
+  stage: build
+  tags:
+    - windows
+    - vs2022
+  before_script:
+    # requires git-bash on the runner; build.sh and the module scripts are bash.
+    - bash -c "git submodule update --init --depth 1 dist-assets/binaries windows/libwfp windows/windows-libraries"
+  script:
+    - bash -c "./build.sh --optimize"
+  artifacts:
+    name: "mullvad-windows-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/*.exe
+    expire_in: 1 week
