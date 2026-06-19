@@ -49,7 +49,6 @@ build-windows:
   stage: build
   tags:
     - windows
-    - vs2022
   before_script:
     # requires git-bash on the runner; build.sh and the module scripts are bash.
     - bash -c "git submodule update --init --depth 1 dist-assets/binaries windows/libwfp windows/windows-libraries"
